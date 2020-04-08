@@ -26,9 +26,8 @@
 
 import datetime
 import requests 
+import json
 import asyncio
-import sched, time
-import threading
 from pymongo import MongoClient
 
 
@@ -70,40 +69,47 @@ def checkHowManyElements(mongo_client = MONGO_CLIENT):
 
     db = mongo_client.crypto
     collection = db.cr_coll
-    print("Number of elements: " + str(collection.count()))
-    return collection.count()
+    print('Number of elements: ' + str(collection.count_documents({})))
+    return collection.count_documents({})
 
 
-def monitoringTask(stop_task, mongo_client = MONGO_CLIENT):
+async def monitoringTask(mongo_client = MONGO_CLIENT):
     ''' Check each URl in URLs, every DELAY_SECONDs, store everything, if reached 10 elements
         the processingTask is notified. '''
 
-    print('-> Monitoring task started at: ' + str(datetime.datetime.now()))
+    print('-> Monitoring task checked at: ' + str(datetime.datetime.now()))
     for u in URLs:
         storeToMongo(queryApi(MAIN_URL + u)) # Store data
 
     if checkHowManyElements() > 10:
-        processingTask(stop_task) # Call processing task
-
-    if not stop_task.is_set():
-        # call f() again in DELAY_SECONDs seconds
-        threading.Timer(DELAY_SECONDs, monitoringTask, [stop_task]).start()
+        await asyncio.create_task(processingTask())# Call processing task
     
+    await asyncio.sleep(DELAY_SECONDs)
 
 
-def processingTask(stop_task, mongo_client = MONGO_CLIENT):
+async def processingTask( mongo_client = MONGO_CLIENT):
     " Pack all the data, serialize it, send it to the Sender and delete from the db "
 
-    print('-> processing task started at: ' + str(datetime.datetime.now()))
-    return 1    
+    print('-> Processing task started at: ' + str(datetime.datetime.now()))
+    db = mongo_client.crypto
+    collection = db.cr_coll
 
-def main():
+    # Serialization
+    elements = list()
+    for element in collection.find():
+        element.append(element)
+    elements = json.dumps(elements) 
+
+    # Send to sender ?
+
+
+
+async def main():
     print('::::: CryptoBot started at: ' + str(datetime.datetime.now()) + ' :::::')
-
-    stop = threading.Event()
-    monitoringTask(stop)
+    
+    while True:
+        await asyncio.create_task(monitoringTask())
     
 
-
-if __name__ == "__main__":
-    main()
+# Run
+asyncio.run(main())
