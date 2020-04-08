@@ -5,9 +5,11 @@
 
 from multiprocessing import Process,Pipe
 
-def send(child_conn):
+def send(child_conn, data):
     
+    # 
+    print("Hey man I'm speaking from sender")
 
     msg = "Everything sent to the endpoint"
-    child_conn.send(msg)
+    # child_conn.send(msg)
     child_conn.close()

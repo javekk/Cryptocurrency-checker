@@ -25,10 +25,16 @@
 
 
 import datetime
+import asyncio
+
 import requests 
 import json
-import asyncio
+
 from pymongo import MongoClient
+from bson.json_util import dumps
+
+from multiprocessing import Process,Queue,Pipe
+from sender import send
 
 
 MAIN_URL = 'https://api.cryptonator.com/api/ticker/'
@@ -94,14 +100,17 @@ async def processingTask( mongo_client = MONGO_CLIENT):
     db = mongo_client.crypto
     collection = db.cr_coll
 
-    # Serialization
-    elements = list()
-    for element in collection.find():
-        element.append(element)
-    elements = json.dumps(elements) 
+    # Serialization with bson
+    elements = dumps(collection.find()) 
 
-    # Send to sender ?
+    # Send to sender
+    parent_conn, child_conn = Pipe()
+    p = Process(target=send, args=(child_conn, elements))
+    p.start()
+    #print(parent_conn.recv())
 
+    # Delete all
+    collection.remove({})
 
 
 async def main():
