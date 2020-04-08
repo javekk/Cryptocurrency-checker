@@ -26,12 +26,17 @@
 
 import datetime
 import requests 
+import asyncio
+import sched, time
+import threading
 from pymongo import MongoClient
 
 
 MAIN_URL = 'https://api.cryptonator.com/api/ticker/'
 
-URLs = {'', '', ''}
+URLs = {'btc-usd', 'eth-usd', 'xrp-usd'}
+
+DELAY_SECONDs = 10
 
 MONGO_CLIENT = MongoClient('mongodb://localhost:27017/')
 
@@ -60,14 +65,44 @@ def storeToMongo(data, mongo_client = MONGO_CLIENT):
     return str(id)
 
 
-def monitoringTask():
-    " Check each URl in URLs, every DELAY_SECONDs"
-    return 1
+def checkHowManyElements(mongo_client = MONGO_CLIENT):
+    " Check how many elements in the db"
+
+    db = mongo_client.crypto
+    collection = db.cr_coll
+    print("Number of elements: " + str(collection.count()))
+    return collection.count()
+
+
+def monitoringTask(stop_task, mongo_client = MONGO_CLIENT):
+    ''' Check each URl in URLs, every DELAY_SECONDs, store everything, if reached 10 elements
+        the processingTask is notified. '''
+
+    print('-> Monitoring task started at: ' + str(datetime.datetime.now()))
+    for u in URLs:
+        storeToMongo(queryApi(MAIN_URL + u)) # Store data
+
+    if checkHowManyElements() > 10:
+        processingTask(stop_task) # Call processing task
+
+    if not stop_task.is_set():
+        # call f() again in DELAY_SECONDs seconds
+        threading.Timer(DELAY_SECONDs, monitoringTask, [stop_task]).start()
+    
+
+
+def processingTask(stop_task, mongo_client = MONGO_CLIENT):
+    " Pack all the data, serialize it, send it to the Sender and delete from the db "
+
+    print('-> processing task started at: ' + str(datetime.datetime.now()))
+    return 1    
 
 def main():
-    print(':::::CryptoBot started at: ' + str(datetime.datetime.now()) + ':::::')
-    final_urll = MAIN_URL + 'btc-usd'
-    print(storeToMongo(queryApi(url= final_urll)))
+    print('::::: CryptoBot started at: ' + str(datetime.datetime.now()) + ' :::::')
+
+    stop = threading.Event()
+    monitoringTask(stop)
+    
 
 
 if __name__ == "__main__":
