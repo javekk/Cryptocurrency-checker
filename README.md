@@ -8,7 +8,9 @@ Simple app to monitor trends for different cryptocurrencies
 
 ## How to deploy
 
-First, run the MongoDB server:
+First, download and run the MongoDB server:
+
+    $ docker pull mongo
 
     $ docker run -d -p 27017-27019:27017-27019 --name mongodb mongo
 
