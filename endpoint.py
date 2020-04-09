@@ -12,7 +12,7 @@ def index():
 
 # Implement the actual service on http://localhost:5000/cryptos/
 @app.route('/cryptos', methods = ['POST'])
-def user():
+def cryp():
     auth_token = "not_provided"
     if 'auth_token' in request.headers:
         auth_token = request.headers['auth_token']
