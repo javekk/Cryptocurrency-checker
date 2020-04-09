@@ -107,10 +107,10 @@ async def processingTask( mongo_client = MONGO_CLIENT):
     parent_conn, child_conn = Pipe()
     p = Process(target=send, args=(child_conn, elements))
     p.start()
-    #print(parent_conn.recv())
+    print(parent_conn.recv()) # Everything went fine
 
     # Delete all
-    collection.remove({})
+    collection.delete_many  ({})
 
 
 async def main():
